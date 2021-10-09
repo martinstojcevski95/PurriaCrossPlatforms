@@ -1,0 +1,23 @@
+fileFormatVersion: 2
+guid: e7866078932d48f4d97de7292e148858
+TrueTypeFontImporter:
+  externalObjects: {}
+  serializedVersion: 4
+  fontSize: 16
+  forceTextureCase: -2
+  characterSpacing: 0
+  characterPadding: 1
+  includeFontData: 1
+  fontName: Narrenschiff
+  fontNames:
+  - Narrenschiff
+  fallbackFontReferences:
+  - {fileID: 12800000, guid: 3bf2359abaaeb6e48997d23ea00632f4, type: 3}
+  customCharacters: 
+  fontRenderingMode: 0
+  ascentCalculationMode: 1
+  useLegacyBoundsCalculation: 0
+  shouldRoundAdvanceValue: 1
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

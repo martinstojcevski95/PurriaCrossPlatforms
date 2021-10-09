@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "926572729644",
+    "firebase_url": "https://purriafresh.firebaseio.com",
+    "project_id": "purriafresh",
+    "storage_bucket": "purriafresh.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:926572729644:android:d9db99cd8c47fa4f8c8889",
+        "android_client_info": {
+          "package_name": "com.InfernoStudios.Purria"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "926572729644-s1sqnoh23ei3051shqure72t44iqv4r5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBTb3vhLCAxIOBY_vmIHd9ihmRYjYmiH_k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "926572729644-s1sqnoh23ei3051shqure72t44iqv4r5.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
