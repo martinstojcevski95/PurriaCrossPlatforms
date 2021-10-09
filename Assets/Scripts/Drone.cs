@@ -116,6 +116,15 @@ public class Drone : MonoBehaviour
     {
         var currentDroneContract = droneManager.GetCurrentDroneManagerContract();
 
+
+        if (currentDroneContract == null)
+        {
+            UIController.Instance.DisplayAutomaticLogText(2f, "Please first select a field, to assign drone");
+            Debug.Log("test");
+            return;
+        }
+  
+
         droneStats = new DroneStats();
         droneStats.DroneBattery = 100;
         droneStats.isDroneAssigned = true;
