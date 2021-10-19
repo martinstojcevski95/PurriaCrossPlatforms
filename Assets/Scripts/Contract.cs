@@ -1,4 +1,6 @@
 ﻿using Firebase.Database;
+using Firebase.Extensions;
+using Purria;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -19,7 +21,7 @@ public class Contract : MonoBehaviour
     public ContractStats contractStats;
 
 
-   ContractPublicInfo contractPublicInfo;
+    ContractPublicInfo contractPublicInfo;
 
     public List<Plant> plants = new List<Plant>();
 
@@ -33,11 +35,11 @@ public class Contract : MonoBehaviour
     public bool isContractDataLoadedFully;
     public ContractGrid contGrid;
     [SerializeField] InputField ContractFieldIDInput;
-   // DateTime over = DateTime.Parse("09/28/2021 22:00:39");
+    // DateTime over = DateTime.Parse("09/28/2021 22:00:39");
 
 
 
-   DateTime ContractTime;
+    DateTime ContractTime;
 
     private void Awake()
     {
@@ -50,12 +52,12 @@ public class Contract : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-   
+
         ContractFieldIDInput = UIController.Instance.ContractFieldIDInput;
     }
 
 
- 
+
     /// <summary>
     /// Instaitiate plants for started contract
     /// </summary>
@@ -100,40 +102,30 @@ public class Contract : MonoBehaviour
                 contractStats.isContractStarted = true;
                 string serializedJson = JsonUtility.ToJson(contractStats);
 
-                 FirebaseReferenceManager.reference.Child("USERS").Child(LogInAndRegister.Instance.UserName).Child("farmdata").Child("contract" + contractStats.ContractID).SetRawJsonValueAsync(serializedJson).ContinueWith(task =>
+                MainManager.firebase().Child("contract" + contractStats.ContractID).SetRawJsonValueAsync(serializedJson).ContinueWithOnMainThread(task =>
                 {
-                    if (task.IsFaulted)
-                    {
-                        Debug.Log("POST REQUEST FAILED  FOR CONTRACT " + contractStats.ContractID);
-                    }
-                    else if (task.IsCompleted)
-                    {
-
-                        Debug.Log("POST REQUEST SUCCESS  FOR CONTRACT" + contractStats.ContractID);
-                        LoadContractData();
-                        ContractController.Instance.ContractInteractibleButtons(true);
-                        ContractController.Instance.isGridsContractChosen = false;
-                    }
+                    OnContractCreatedResponseReceived(task);
                 });
-                OnGridStatsSetToDB();
+
             }
         }
         else
-            UIController.Instance.DisplayAutomaticLogText(2f,"Go to auction for bidding and select a field and return to create contract");
- 
+            MainManager.OnUIInfoOpen("Go to auction first, the bid will randomly choose a place for your plants and weather condition. After choosing return to create contract", 7f);
+
     }
+
 
 
 
     /// <summary>
     /// Planting plants for the created contract
     /// </summary>
-   public void CreatePlantsForContract(int fieldID)
+    public void CreatePlantsForContract(int fieldID)
     {
         InstantiatePlantsForContract();
         for (int i = 0; i < plants.Count; i++)
         {
-            plants[i].SetInitialPlants(contractStats.ContractID, i,fieldID);
+            plants[i].SetInitialPlants(contractStats.ContractID, i, fieldID);
         }
     }
 
@@ -142,7 +134,7 @@ public class Contract : MonoBehaviour
     /// Retrieveing field plants growth factors and stats data
     /// </summary>
     /// <param name="fieldid"></param>
-    public void RetrieveFieldPlantsData( int fieldid)
+    public void RetrieveFieldPlantsData(int fieldid)
     {
         if (contractStats == null)
             return;
@@ -150,7 +142,7 @@ public class Contract : MonoBehaviour
         for (int i = 0; i < plants.Count; i++)
         {
             plants[i].GetFieldPlantStatsData(contractStats.ContractID, i, fieldid);
-            plants[i].GetFieldPlantsGrwothFactorsData(contractStats.ContractID, i,fieldid);
+            plants[i].GetFieldPlantsGrwothFactorsData(contractStats.ContractID, i, fieldid);
         }
 
     }
@@ -163,12 +155,12 @@ public class Contract : MonoBehaviour
         if (contractStats != null)
         {
             ContractController.Instance.RemoveCreatedContractId(contractStats.ContractID);
-            FirebaseReferenceManager.reference.Child("USERS").Child(LogInAndRegister.Instance.UserName).Child("farmdata").Child("contract" + contractStats.ContractID).RemoveValueAsync();
+            MainManager.firebase().Child("contract" + contractStats.ContractID).RemoveValueAsync();
             UIController.Instance.CloseDeleteDialog();
             contractStats = null;
             UIController.Instance.DeleteDialogYesButton.onClick.RemoveAllListeners();
         }
-        DeletePlants();   
+        DeletePlants();
     }
 
 
@@ -194,57 +186,52 @@ public class Contract : MonoBehaviour
         UIController.Instance.DeleteDialog(true, "Do you want to delete the contract?");
     }
 
-  
+
 
     /// <summary>
     /// Loads data  from db for each contract after the log in 
     /// </summary>
     public void LoadContractData()
     {
-
-        FirebaseDatabase.DefaultInstance
-           .GetReference("USERS").Child(LogInAndRegister.Instance.UserName).Child("farmdata").Child("contract" + contractPublicInfo.StaticConttractID)
-           .GetValueAsync().ContinueWith(task => OnContractResponseReceived(task.Result,task));
-      //{
-      //if (task.IsFaulted)
-      //{
-      //    Debug.Log("GET REQUEST FAILED FOR CONTRACT " + contractPublicInfo.StaticConttractID);
-
-      //}
-      //else if (task.IsCompleted)
-      //{
-      //    DataSnapshot snapshot = task.Result;
-
-
-      //        if (snapshot.GetRawJsonValue() == "Null")
-      //            isDataLoaded = true;
-      //        else
-      //        {
-      //            contractStats = JsonUtility.FromJson<ContractStats>(snapshot.GetRawJsonValue());     
-      //            Debug.Log("GET REQUEST SUCCESS FOR CONTRACT " + contractPublicInfo.StaticConttractID + " DATA :  " + snapshot.GetRawJsonValue());
-      //            isDataLoaded = true;
-      //            UIController.Instance.isLogged = true;
-      //            ContractController.Instance.ContractIDS.Add(contractStats.ContractID);
-      //        }
-
-      //    }
-
-     // });
-
+        MainManager.firebase().Child("contract" + contractPublicInfo.StaticConttractID)
+           .GetValueAsync().ContinueWithOnMainThread(task => OnContractResponseReceived(task.Result, task));
     }
 
-    void OnContractResponseReceived(DataSnapshot snap,Task task)
+    /// <summary>
+    /// on contract data received response
+    /// </summary>
+    /// <param name="snap"></param>
+    /// <param name="task"></param>
+    void OnContractResponseReceived(DataSnapshot snap, Task task)
     {
         if (task.IsFaulted)
         {
             Debug.LogError("failed");
             return;
         }
-
-        Debug.Log("conctract data " + snap.GetRawJsonValue());
         contractStats = JsonUtility.FromJson<ContractStats>(snap.GetRawJsonValue());
-        UIController.Instance.isLogged = true;
         ContractController.Instance.ContractIDS.Add(contractStats.ContractID);
+    }
+
+    /// <summary>
+    /// on create contract response received
+    /// </summary>
+    /// <param name="result"></param>
+    void OnContractCreatedResponseReceived(Task result)
+    {
+        if (result.IsFaulted)
+        {
+            Debug.LogError("failed");
+            return;
+        }
+
+        MainManager.OnUIInfoOpen("Contract created!", 2f);
+            LoadContractData();
+            ContractController.Instance.ContractInteractibleButtons(true);
+            ContractController.Instance.isGridsContractChosen = false;
+            OnGridStatsSetToDB();
+
+
     }
 
     /// <summary>
@@ -276,7 +263,7 @@ public class Contract : MonoBehaviour
         public string ContractDescription;
         public string ContractTag = "Contract";
         public List<int> FieldsIds = new List<int>();
-        public string Time;  
+        public string Time;
     }
 
 

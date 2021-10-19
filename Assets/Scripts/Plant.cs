@@ -1,8 +1,11 @@
 ﻿using Firebase.Database;
+using Firebase.Extensions;
+using Purria;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using UnityEngine;
 
 public class Plant : MonoBehaviour
@@ -19,9 +22,9 @@ public class Plant : MonoBehaviour
     /// </summary>
     /// <param name="contid"></param>
     /// <param name="plantid"></param>
-    public void SetInitialPlants(int contid, int plantid,int fieldID)
+    public void SetInitialPlants(int contid, int plantid, int fieldID)
     {
- 
+
         Debug.Log(fieldID);
         plantStats = new PlantStats();
         plantStats.isDroneAssigned = false;
@@ -45,9 +48,9 @@ public class Plant : MonoBehaviour
         string growthFactorsJson = JsonUtility.ToJson(plantGrowthFactors);
         string statsJson = JsonUtility.ToJson(plantStats);
 
-        FirebaseReferenceManager.reference.Child("USERS").Child(LogInAndRegister.Instance.UserName).Child("farmdata").Child("contract" + contid).Child("Field" + fieldID).Child("stats").Child("plant" + plantid).SetRawJsonValueAsync(statsJson);
-        FirebaseReferenceManager.reference.Child("USERS").Child(LogInAndRegister.Instance.UserName).Child("farmdata").Child("contract" + contid).Child("Field" + fieldID).Child("growthfactors").Child("plant" + plantid).SetRawJsonValueAsync(growthFactorsJson);
-     
+        MainManager.firebase().Child("contract" + contid).Child("Field" + fieldID).Child("stats").Child("plant" + plantid).SetRawJsonValueAsync(statsJson);
+        MainManager.firebase().Child("contract" + contid).Child("Field" + fieldID).Child("growthfactors").Child("plant" + plantid).SetRawJsonValueAsync(growthFactorsJson);
+
     }
 
 
@@ -67,25 +70,13 @@ public class Plant : MonoBehaviour
     /// <param name="StaticConttractID"></param>
     /// <param name="plantID"></param>
     /// <param name="fieldid"></param>
-    public void GetFieldPlantsGrwothFactorsData(int StaticConttractID, int plantID,int fieldid)
+    public void GetFieldPlantsGrwothFactorsData(int StaticConttractID, int plantID, int fieldid)
     {
-        FirebaseDatabase.DefaultInstance
-        .GetReference("USERS").Child(LogInAndRegister.Instance.UserName).Child("farmdata").Child("contract" + StaticConttractID).Child("Field"+ fieldid).Child("growthfactors").Child("plant" + plantID)
+        MainManager.firebase().Child("contract" + StaticConttractID).Child("Field" + fieldid).Child("growthfactors").Child("plant" + plantID)
         .GetValueAsync().ContinueWith(task =>
         {
-            if (task.IsFaulted)
-            {
-                // Handle the error...
-            }
-            else if (task.IsCompleted)
-            {
-                DataSnapshot snapshot = task.Result;
-
-                Debug.Log(snapshot.GetRawJsonValue());
-                plantGrowthFactors = JsonUtility.FromJson<PlantGrowthFactors>(snapshot.GetRawJsonValue());
-
-                //   StartCoroutine(PlantsGrowthFactorsDataCoroutine(snapshot));
-            }
+            OnPlantGrowthFactorsResponseReceived(task.Result, task);
+    
         });
     }
 
@@ -98,27 +89,62 @@ public class Plant : MonoBehaviour
     /// <param name="fieldid"></param>
     public void GetFieldPlantStatsData(int StaticConttractID, int plantID, int fieldid)
     {
-        FirebaseDatabase.DefaultInstance
-           .GetReference("USERS").Child(LogInAndRegister.Instance.UserName).Child("farmdata").Child("contract" + StaticConttractID).Child("Field" + fieldid).Child("stats").Child("plant" + plantID)
-           .GetValueAsync().ContinueWith(task =>
+        MainManager.firebase().Child("contract" + StaticConttractID).Child("Field" + fieldid).Child("stats").Child("plant" + plantID)
+           .GetValueAsync().ContinueWithOnMainThread(task =>
            {
-               if (task.IsFaulted)
-               {
-                   // Handle the error...
-               }
-               else if (task.IsCompleted)
-               {
-                   DataSnapshot snapshot = task.Result;
+               OnPlantStatsResponseReceived(task.Result, task);
+               //if (task.IsFaulted)
+               //{
+               //    // Handle the error...
+               //}
+               //else if (task.IsCompleted)
+               //{
+               //    DataSnapshot snapshot = task.Result;
 
-                   // Debug.Log(snapshot.GetRawJsonValue());
+               //    // Debug.Log(snapshot.GetRawJsonValue());
 
-                   plantStats = JsonUtility.FromJson<PlantStats>(snapshot.GetRawJsonValue());
-                   lastVisitedDroneTime = DateManager.dateManager.TicksToDateTime(plantStats.LastVisitedDroneTime);// JsonUtility.FromJson<JsonDateTime>(plantStats.LastVisitedDroneTime);
-                   Debug.Log(DateManager.dateManager.GetFullTimeDifference(lastVisitedDroneTime));
+               //    plantStats = JsonUtility.FromJson<PlantStats>(snapshot.GetRawJsonValue());
+               //    lastVisitedDroneTime = DateManager.dateManager.TicksToDateTime(plantStats.LastVisitedDroneTime);// JsonUtility.FromJson<JsonDateTime>(plantStats.LastVisitedDroneTime);
+               //    Debug.Log(DateManager.dateManager.GetFullTimeDifference(lastVisitedDroneTime));
 
-               }
+               //}
            });
 
+    }
+
+
+    /// <summary>
+    /// get plants stats data
+    /// </summary>
+    /// <param name="snap"></param>
+    /// <param name="task"></param>
+    void OnPlantStatsResponseReceived(DataSnapshot snap, Task task)
+    {
+        if (task.IsFaulted)
+        {
+            Debug.LogError("failed");
+            return;
+        }
+
+        plantStats = JsonUtility.FromJson<PlantStats>(snap.GetRawJsonValue());
+        lastVisitedDroneTime = DateManager.dateManager.TicksToDateTime(plantStats.LastVisitedDroneTime);
+    }
+
+
+    /// <summary>
+    /// get plants growth factors data
+    /// </summary>
+    /// <param name="snap"></param>
+    /// <param name="task"></param>
+    void OnPlantGrowthFactorsResponseReceived(DataSnapshot snap, Task task)
+    {
+        if (task.IsFaulted)
+        {
+            Debug.LogError("failed");
+            return;
+        }
+
+        plantGrowthFactors = JsonUtility.FromJson<PlantGrowthFactors>(snap.GetRawJsonValue());
     }
 
 

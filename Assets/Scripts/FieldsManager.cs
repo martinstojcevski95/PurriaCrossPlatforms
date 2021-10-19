@@ -1,4 +1,5 @@
 ﻿using DG.Tweening;
+using Purria;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -82,7 +83,7 @@ public class FieldsManager : MonoBehaviour
 
         }
         else
-            Debug.Log("contract not yet started");
+            MainManager.OnUIInfoOpen("Contract is not yet started", 3f);
     }
 
     public void ResetDropdownValue()
@@ -141,7 +142,7 @@ public class FieldsManager : MonoBehaviour
                 DirtBlocks[i].GetComponent<DirtBlock>().SetDirtBlock(plants[i]);
             }
         }
-        FieldHolder.DOAnchorPos(new Vector2(46f, -95.2f), 0.5f);
+        FieldHolder.DOAnchorPos(new Vector2(-2719.16f, -109), 0.5f);
     }
    
 

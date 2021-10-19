@@ -1,7 +1,9 @@
 ﻿using Firebase.Database;
+using Firebase.Extensions;
+using Purria;
 using System;
-using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -11,6 +13,22 @@ public class ContractGrid : MonoBehaviour
     Color pickingColor;
     public GridStats gridStats;
 
+    List<string> GridPlaces = new List<string>();
+
+    
+
+    void SetGridPlaces()
+    {
+        GridPlaces.Add("Valley");
+        GridPlaces.Add("Mountains");
+        GridPlaces.Add("Forest");
+        GridPlaces.Add("Mountains");
+    }
+
+    private void OnEnable()
+    {
+        SetGridPlaces();
+    }
 
     public void SetGrid(int staticGrid)
     {
@@ -33,24 +51,32 @@ public class ContractGrid : MonoBehaviour
         }
     }
 
+    string randomPlace()
+    {
+        string place = GridPlaces[UnityEngine.Random.Range(0, GridPlaces.Count - 1)];
+
+        return place;
+    }
+
     public void CheckCurrentGridStatus()
     {
         if (gridStats != null)
         {
             if (gridStats.isGridTaken == true)
             {
-                Debug.Log("grid used" + StaticGridID);
+                MainManager.OnUIInfoOpen("Place used ", 1.5f);
+               
             }
             else
             {
-                Debug.Log("grid not used" + StaticGridID);
+                MainManager.OnUIInfoOpen("Your field place is " + randomPlace() + " go back and create contract ", 1.5f);
                 OnCurrentChosenGrid();
             }
 
         }
         else
         {
-            Debug.Log("grid not used" + StaticGridID);
+            MainManager.OnUIInfoOpen("Your field place is " + randomPlace() + " go back and create contract ", 1.5f);
             OnCurrentChosenGrid();
         }
 
@@ -77,17 +103,7 @@ public class ContractGrid : MonoBehaviour
         gridStats.isGridTaken = true;
         gridStats.LinkedGridContractID = contract.contractStats.ContractID;
         string serializedJson = JsonUtility.ToJson(gridStats);
-        FirebaseReferenceManager.reference.Child("USERS").Child(LogInAndRegister.Instance.UserName).Child("farmdata").Child("contract" + contract.contractStats.ContractID).Child("GridStats").SetRawJsonValueAsync(serializedJson).ContinueWith(task =>
-        {
-            if (task.IsFaulted)
-            {
-                // Handle the error...
-            }
-            else if (task.IsCompleted)
-            {
-                Debug.Log(gridStats);
-            }
-        });
+        MainManager.firebase().Child("contract" + contract.contractStats.ContractID).Child("GridStats").SetRawJsonValueAsync(serializedJson).ContinueWith(task => { });
 
     }
 
@@ -97,24 +113,22 @@ public class ContractGrid : MonoBehaviour
     /// <param name="contrctID"></param>
     public void GetGridData(int contrctID)
     {
-        FirebaseDatabase.DefaultInstance.GetReference("USERS").Child(LogInAndRegister.Instance.UserName).Child("farmdata").Child("contract" + contrctID).Child("GridStats")
-        .GetValueAsync().ContinueWith(task =>
+        MainManager.firebase().Child("contract" + contrctID).Child("GridStats")
+        .GetValueAsync().ContinueWithOnMainThread(task =>
         {
-            if (task.IsFaulted)
-            {
-                //  Debug.Log("GET REQUEST FAILED FOR CONTRACT " + contractPublicInfo.StaticConttractID);
-
-            }
-            else if (task.IsCompleted)
-            {
-                DataSnapshot snapshot = task.Result;
-
-                if (snapshot.GetRawJsonValue().Length >= 5)
-                    gridStats = JsonUtility.FromJson<GridStats>(snapshot.GetRawJsonValue());
-
-            }
+            OnContractGridResponseReceived(task.Result, task);
         });
 
+    }
+    void OnContractGridResponseReceived(DataSnapshot snap, Task task)
+    {
+        if (task.IsFaulted)
+        {
+            Debug.LogError("failed");
+            return;
+        }
+
+        gridStats = JsonUtility.FromJson<GridStats>(snap.GetRawJsonValue());
     }
 
 

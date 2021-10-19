@@ -1,31 +1,31 @@
-﻿using Firebase;
+﻿using DG.Tweening;
+using Firebase;
 using Firebase.Auth;
 using Firebase.Database;
 using Firebase.Unity.Editor;
+using Purria;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
-using UnityEngine.Events;
 using UnityEngine.UI;
 
 public class LogInAndRegister : MonoBehaviour
 {
 
+
     [Header("Login And Register")]
     public InputField RegistrationEmail, RegistrationPassword, LogInEmail, LogInPassword;
-    public string userID;
-    public string UserName;
+
     public User _User;
 
     public static LogInAndRegister Instance;
 
-    public string user, password;
     public int AutoLogIn;
-    bool isfailed;
 
     [SerializeField] Toggle toggle;
-    [SerializeField] Text LOGTEXT;
+    [SerializeField] Button logInBtn;
 
 
     void Awake()
@@ -41,9 +41,11 @@ public class LogInAndRegister : MonoBehaviour
             Destroy(gameObject);
         }
 
-      //  SetGameViewScale();
+        //  SetGameViewScale();
         CheckForRememberedLogIn();
     }
+
+
 
     // Start is called before the first frame update
     void Start()
@@ -53,12 +55,14 @@ public class LogInAndRegister : MonoBehaviour
         FirebaseApp.DefaultInstance.SetEditorDatabaseUrl(DATABASEURL);
         reference = FirebaseDatabase.DefaultInstance.RootReference;
         Firebase.FirebaseApp.Create();
+
     }
 
 
 
-
-    
+    /// <summary>
+    /// Remember creds
+    /// </summary>
     void CheckForRememberedLogIn()
     {
 
@@ -71,6 +75,10 @@ public class LogInAndRegister : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Remember me toggle
+    /// </summary>
+    /// <param name="toggle"></param>
     public void RememberMe(Toggle toggle)
     {
         if (toggle.isOn)
@@ -79,59 +87,116 @@ public class LogInAndRegister : MonoBehaviour
             RemoveLogInCreds();
     }
 
-    // Update is called once per frame
-    void Update()
+
+    /// <summary>
+    /// Firebase log in
+    /// </summary>
+    /// <param name="_email"></param>
+    /// <param name="_password"></param>
+    /// <returns></returns>
+    private IEnumerator Login(string _email, string _password)
     {
-        if (isfailed)
+        var LoginTask = auth.SignInWithEmailAndPasswordAsync(_email, _password);
+
+        yield return new WaitUntil(predicate: () => LoginTask.IsCompleted);
+
+        if (LoginTask.Exception != null)
         {
-            if (LogInEmail.text == "" && LogInPassword.text == "")
-                RegisterAndLogInLogInfo("Please enter email and password");
-            else
-                RegisterAndLogInLogInfo("wrong credentials,try again");
+            //If there are errors handle them
+            Debug.LogWarning(message: $"Failed to register task with {LoginTask.Exception}");
+            FirebaseException firebaseEx = LoginTask.Exception.GetBaseException() as FirebaseException;
+            AuthError errorCode = (AuthError)firebaseEx.ErrorCode;
+
+            string message = "Login Failed!";
+            switch (errorCode)
+            {
+                case AuthError.MissingEmail:
+                    message = "Missing Email";
+                    break;
+                case AuthError.MissingPassword:
+                    message = "Missing Password";
+                    break;
+                case AuthError.WrongPassword:
+                    message = "Wrong Password";
+                    break;
+                case AuthError.InvalidEmail:
+                    message = "Invalid Email";
+                    break;
+                case AuthError.UserNotFound:
+                    message = "Account does not exist";
+                    break;
+                case AuthError.UnverifiedEmail:
+                    message = "Please Verify Your Email";
+                    break;
+            }
+            MainManager.OnUIInfoOpen(message, 1f);
+
+        }
+        else
+        {
+            Debug.Log("user logged in");
+            FirebaseUser user = LoginTask.Result;
+            OnLoginResopnse(user);
         }
     }
 
-    void RegisterAndLogInLogInfo(string log)
-    {
-        UIController.Instance.DisplayAutomaticLogText(2f, log);
-        isfailed = false;
-    }
-
-
 
     /// <summary>
-    /// Registering a user in the firebase db
+    /// Firebase register
     /// </summary>
-    public void Registration()
+    /// <param name="_email"></param>
+    /// <param name="_password"></param>
+    /// <returns></returns>
+    private IEnumerator Register(string _email, string _password)
     {
+        var LoginTask = auth.CreateUserWithEmailAndPasswordAsync(_email, _password);
 
+        yield return new WaitUntil(predicate: () => LoginTask.IsCompleted);
 
-        auth.CreateUserWithEmailAndPasswordAsync(RegistrationEmail.text, RegistrationPassword.text).ContinueWith(task =>
+        if (LoginTask.Exception != null)
         {
-            if (task.IsCanceled)
-            {
-                Debug.LogError("CreateUserWithEmailAndPasswordAsync was canceled.");
-                return;
-            }
-            if (task.IsFaulted)
-            {
-                Debug.LogError("CreateUserWithEmailAndPasswordAsync encountered an error: " + task.Exception);
-                return;
-            }
+            //If there are errors handle them
+            Debug.LogWarning(message: $"Failed to register task with {LoginTask.Exception}");
+            FirebaseException firebaseEx = LoginTask.Exception.GetBaseException() as FirebaseException;
+            AuthError errorCode = (AuthError)firebaseEx.ErrorCode;
 
-            // Firebase user has been created.
-            Firebase.Auth.FirebaseUser newUser = task.Result;
-            Debug.LogFormat("Firebase user created successfully: {0} ({1})",
-                newUser.DisplayName, newUser.UserId);
-            UserName = newUser.UserId;
+            string message = "Login Failed!";
+            switch (errorCode)
+            {
+                case AuthError.MissingEmail:
+                    message = "Missing Email";
+                    break;
+                case AuthError.MissingPassword:
+                    message = "Missing Password";
+                    break;
+                case AuthError.WrongPassword:
+                    message = "Wrong Password";
+                    break;
+                case AuthError.InvalidEmail:
+                    message = "Invalid Email";
+                    break;
+                case AuthError.EmailAlreadyInUse:
+                    message = "Email Already In Use";
+                    break;
 
-            SetUserToDB(newUser.UserId);
+            }
+            MainManager.OnUIInfoOpen(message, 1f);
+
+        }
+        else
+        {
+            FirebaseUser user = LoginTask.Result;
+            SetUserToDB(user.UserId);
             UIController.Instance.CloseRegister();
             UIManager.Instance.OpenLogin();
-
-        });
+            user.SendEmailVerificationAsync().ContinueWith(t =>
+            {
+ 
+            });
+            MainManager.OnUIInfoOpen("Please go and  verify your email address", 3f);
+        };
+    
     }
-
 
 
     /// <summary>
@@ -139,35 +204,27 @@ public class LogInAndRegister : MonoBehaviour
     /// </summary>
     public void LogIn()
     {
-
-        auth.SignInWithEmailAndPasswordAsync(LogInEmail.text, LogInPassword.text).ContinueWith(task =>
-              {
-
-                  if (task.IsCanceled)
-                  {
-                      Debug.LogError("SignInWithEmailAndPasswordAsync was canceled.");
-                      return;
-                  }
-
-                else if (task.IsFaulted)
-                  {
-                      //  Debug.Log(task.Exception.InnerException.GetBaseException().Message);
-                      isfailed = true;
-                      return;
-                  }
+        StartCoroutine(Login(LogInEmail.text, LogInPassword.text));
+    }
 
 
-                else if (task.IsCompleted)
-                  {
-                      Firebase.Auth.FirebaseUser newUser = task.Result;
-                      Debug.LogFormat("User signed in successfully: {0} ({1})", newUser.DisplayName, newUser.UserId);
-                      UserName = newUser.UserId;
-                       ContractController.Instance.GetDataForAllContracts();
-                        ContractController.Instance.GridsData();
+    /// <summary>
+    /// Regster a user with the registered credentials from the db
+    /// </summary>
+    public void SignUp()
+    {
+        StartCoroutine(Register(RegistrationEmail.text, RegistrationPassword.text));
+    }
 
-                  }
-    
-              });
+
+    void OnLoginResopnse(FirebaseUser user)
+    {
+        var checkVeriication = user.IsEmailVerified;
+       if(checkVeriication == false) { MainManager.OnUIInfoOpen("Email not verified!", 3f);  return; }
+        _User.UserName = user.UserId;
+        ContractController.Instance.GetDataForAllContracts();
+        ContractController.Instance.GridsData();
+        UIController.Instance.OpenDashBoard();
     }
 
 
@@ -179,10 +236,10 @@ public class LogInAndRegister : MonoBehaviour
     {
         User user = new User();
         user.UserName = userName;
-        user.UserID = userID;
         string ToJson = JsonUtility.ToJson(user);
         reference.Child("USER").SetValueAsync(ToJson);
     }
+
 
     /// <summary>
     /// Set the credentials to be remembered for every next log in
@@ -195,6 +252,8 @@ public class LogInAndRegister : MonoBehaviour
         PlayerPrefs.SetInt("autolog", AutoLogIn = 1);
 
     }
+
+
     /// <summary>
     /// Remove the current credentials
     /// </summary>
@@ -237,7 +296,6 @@ public class LogInAndRegister : MonoBehaviour
     public class User
     {
         public string UserName;
-        public string UserID;
     }
 
 

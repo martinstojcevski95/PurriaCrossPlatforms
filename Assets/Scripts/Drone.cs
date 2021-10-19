@@ -1,8 +1,10 @@
-﻿using Firebase.Database;
+﻿using Firebase;
+using Firebase.Database;
+using Firebase.Extensions;
+using Purria;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -12,7 +14,7 @@ public class Drone : MonoBehaviour
     public DroneType dropeType;
     public int DroneStaticID;
 
-   public DroneStats droneStats;
+    public DroneStats droneStats;
     DroneManager droneManager;
 
     [SerializeField] Text droneAssingment;
@@ -24,13 +26,14 @@ public class Drone : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-    
+
         droneTypeName.text = dropeType.ToString();
         droneDescription.text = "Test description";
+        gameObject.name = dropeType.ToString();
 
         FindDroneManager();
         var droneBtn = this.GetComponent<Button>();
-        if(droneBtn != null)
+        if (droneBtn != null)
             droneBtn.onClick.AddListener(AssignDroneToField);
 
     }
@@ -71,10 +74,9 @@ public class Drone : MonoBehaviour
     }
 
 
-
     public void RemoveDroneFromField()
     {
-        if(droneStats != null)
+        if (droneStats != null)
         {
             if (droneStats.isDroneAssigned)
             {
@@ -84,31 +86,12 @@ public class Drone : MonoBehaviour
                 UIController.Instance.CloseDeleteDialog();
                 UIController.Instance.DeleteDialogYesButton.onClick.RemoveAllListeners();
 
-                FirebaseReferenceManager.reference.Child("USERS").Child(LogInAndRegister.Instance.UserName).Child("farmdata").Child("contract" + currentDroneContract.contractStats.ContractID).Child("Field" + currentDroneContract.GetCurrentContractFieldManager().field.StaticFieldID).Child("Drone" + DroneStaticID).RemoveValueAsync();//.ContinueWith(task =>
-                //{
-                //    if (task.IsFaulted)
-                //    {
-
-                //          Debug.Log("POST REQUEST FAILED  FOR CONTRACT " + contractStats.ContractID);
-                //         Handle the error...
-                //    }
-                //    else if (task.IsCompleted)
-                //    {
-
-                //         Debug.Log("POST REQUEST SUCCESS  FOR CONTRACT" + contractStats.ContractID);
-                //         LoadContractDataA();
-
-                //        Debug.Log(task.IsCompleted);
-                //        droneStats = null;
-                //        UIController.Instance.CloseDeleteDialog();
-                //        UIController.Instance.DeleteDialogYesButton.onClick.RemoveAllListeners();
-
-                //    }
-                //});
+                MainManager.firebase().Child("contract" + currentDroneContract.contractStats.ContractID).Child("Field" + currentDroneContract.GetCurrentContractFieldManager().field.StaticFieldID).Child("Drone" + DroneStaticID).RemoveValueAsync();//.ContinueWith(task =>
 
             }
             else
-                Debug.Log("drone not assigned");
+                MainManager.OnUIInfoOpen("Drone not assigned", 7f);
+
         }
     }
 
@@ -119,11 +102,10 @@ public class Drone : MonoBehaviour
 
         if (currentDroneContract == null)
         {
-            UIController.Instance.DisplayAutomaticLogText(2f, "Please first select a field, to assign drone");
-            Debug.Log("test");
+            MainManager.OnUIInfoOpen("Please first select a field, to assign drone", 3f);
             return;
         }
-  
+
 
         droneStats = new DroneStats();
         droneStats.DroneBattery = 100;
@@ -136,62 +118,32 @@ public class Drone : MonoBehaviour
 
         string serializedJson = JsonUtility.ToJson(droneStats);
 
-        UIController.Instance.DisplayAutomaticLogText(2f, "Drone assigned successfully to  contract " + droneStats.DroneContractID + " and field " + droneStats.DroneFieldID);
 
 
-        FirebaseReferenceManager.reference.Child("USERS").Child(LogInAndRegister.Instance.UserName).Child("farmdata").Child("contract" + currentDroneContract.contractStats.ContractID).Child("Field" + currentDroneContract.GetCurrentContractFieldManager().field.StaticFieldID).Child("Drone" + droneStats.DroneID).SetRawJsonValueAsync(serializedJson).ContinueWith(task =>
+        MainManager.firebase().Child("contract" + currentDroneContract.contractStats.ContractID).Child("Field" + currentDroneContract.GetCurrentContractFieldManager().field.StaticFieldID).Child("Drone" + droneStats.DroneID).SetRawJsonValueAsync(serializedJson).ContinueWithOnMainThread(task =>
         {
-            if (task.IsFaulted)
+            if (task.IsCompleted)
             {
-
-                //  Debug.Log("POST REQUEST FAILED  FOR CONTRACT " + contractStats.ContractID);
-                // Handle the error...
-            }
-            else if (task.IsCompleted)
-            {
-
-                // Debug.Log("POST REQUEST SUCCESS  FOR CONTRACT" + contractStats.ContractID);
-                // LoadContractDataA();
-
-                Debug.Log(task.IsCompleted);
+                MainManager.OnUIInfoOpen("Drone assigned successfully to  contract " + droneStats.DroneContractID + " and field " + droneStats.DroneFieldID, 3f);
 
             }
         });
 
     }
 
-
     public void GetDroneData()
     {
 
-
         var currentDroneContract = droneManager.GetCurrentDroneManagerContract();
 
-        FirebaseDatabase.DefaultInstance
-           .GetReference("USERS").Child(LogInAndRegister.Instance.UserName).Child("farmdata").Child("contract" + currentDroneContract.contractStats.ContractID).Child("Field" + currentDroneContract.GetCurrentContractFieldManager().field.StaticFieldID).Child("Drone" + DroneStaticID)
-                  .GetValueAsync().ContinueWith(task =>
-                  {
-                      if (task.IsFaulted)
-                      {
-                   // Handle the error...
-               }
-                      else if (task.IsCompleted)
-                      {
-                          DataSnapshot snapshot = task.Result;
-
-                   droneStats = JsonUtility.FromJson<DroneStats>(snapshot.GetRawJsonValue());
-
-                     
-                      }
-                  });
-
-        Debug.Log(currentDroneContract.contractStats.ContractID + " field " + currentDroneContract.GetCurrentContractFieldManager().field.StaticFieldID);
+        MainManager.firebase().Child("contract" + currentDroneContract.contractStats.ContractID).Child("Field" + currentDroneContract.GetCurrentContractFieldManager().field.StaticFieldID).Child("Drone" + DroneStaticID)
+                  .GetValueAsync().ContinueWithOnMainThread(task => OnDroneDataReceived(task.Result));
 
     }
 
-    void AssignDroneStaticID()
+    void OnDroneDataReceived(DataSnapshot result)
     {
-        DroneStaticID += droneManager.DronesCount();
+        droneStats = JsonUtility.FromJson<DroneStats>(result.GetRawJsonValue());
     }
 
 
@@ -207,6 +159,25 @@ public class Drone : MonoBehaviour
         public bool isDroneAssigned;
     }
 
+    public void OnDroneAssignDateChange()
+    {
+        if (droneStats == null) { MainManager.OnUIInfoOpen("Drone is not assigned to any contract!", 3f); return; }
+        var currentDroneContract = droneManager.GetCurrentDroneManagerContract();
+
+
+        Dictionary<string, object> droneParameters = new Dictionary<string, object>();
+
+        droneParameters.Add("LastVisitedDroneTime", currentDroneContract.plants[0].plantStats.LastVisitedDroneTime = DateManager.dateManager.DateTimeToTicks());
+
+        for (int i = 0; i < currentDroneContract.plants.Count; i++)
+        {
+
+            MainManager.firebase().Child("contract" + droneStats.DroneContractID).Child("Field" + droneStats.DroneFieldID).Child("stats").Child("plant" + i).UpdateChildrenAsync(droneParameters);
+
+        }
+        MainManager.OnUIInfoOpen("Plant drone working hours updated!", 3f);
+    }
+
     public enum DroneType
     {
         LadyBugFertilizer,
@@ -217,8 +188,6 @@ public class Drone : MonoBehaviour
         Elephantharvester,
         Beaverplanter,
         Storkmedic
-
-
     }
 
 }

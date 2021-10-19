@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Firebase.Database;
+using Purria;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -42,8 +43,7 @@ public class FieldManager : MonoBehaviour
 
     public void GetFieldData()
     {
-        FirebaseDatabase.DefaultInstance
-           .GetReference("USERS").Child(LogInAndRegister.Instance.UserName).Child("farmdata").Child("contract" + currentFieldContract.contractStats.ContractID).Child("Field" + field.StaticFieldID).GetValueAsync().ContinueWith(task =>
+        MainManager.firebase().Child("contract" + currentFieldContract.contractStats.ContractID).Child("Field" + field.StaticFieldID).GetValueAsync().ContinueWith(task =>
            {
                if (task.IsFaulted)
                {
@@ -77,7 +77,7 @@ public class FieldManager : MonoBehaviour
         field.isSet = true;
 
         string serializedJson = JsonUtility.ToJson(field);
-        FirebaseReferenceManager.reference.Child("USERS").Child(LogInAndRegister.Instance.UserName).Child("farmdata").Child("contract" + currentFieldContract.contractStats.ContractID).Child("Field" + field.StaticFieldID).SetRawJsonValueAsync(serializedJson).ContinueWith(task =>
+        MainManager.firebase().Child("contract" + currentFieldContract.contractStats.ContractID).Child("Field" + field.StaticFieldID).SetRawJsonValueAsync(serializedJson).ContinueWith(task =>
         {
             if (task.IsFaulted)
             {
