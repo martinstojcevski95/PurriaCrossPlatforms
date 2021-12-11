@@ -34,7 +34,7 @@ public class Drone : MonoBehaviour
         FindDroneManager();
         var droneBtn = this.GetComponent<Button>();
         if (droneBtn != null)
-            droneBtn.onClick.AddListener(AssignDroneToField);
+            droneBtn.onClick.AddListener(OpenAssignDroneCycleDialog);
 
     }
 
@@ -95,6 +95,13 @@ public class Drone : MonoBehaviour
         }
     }
 
+
+    public void OpenAssignDroneCycleDialog()
+    {
+        UIController.Instance.DeleteDialogYesButton.onClick.AddListener(() => AssignDroneToField());
+        UIController.Instance.DeleteDialog(true, "Do you want to assign the drone and start the growth cycle?");
+    }
+
     public void AssignDroneToField()
     {
         var currentDroneContract = droneManager.GetCurrentDroneManagerContract();
@@ -115,7 +122,7 @@ public class Drone : MonoBehaviour
         droneStats.isDroneBusy = true;
         droneStats.DroneID = DroneStaticID;
         droneStats.droneType = dropeType.ToString();
-
+        droneStats.DronePlantsCapacity = 10;
         string serializedJson = JsonUtility.ToJson(droneStats);
 
 
@@ -129,6 +136,12 @@ public class Drone : MonoBehaviour
             }
         });
 
+        //starting the clund function for the 30 days growth cycle, only for GROWTHFACTORS for the plants not for stats
+        MainManager.OnGrowthCycleStart(currentDroneContract.contractStats.ContractID.ToString(),currentDroneContract.GetCurrentContractFieldManager().field.StaticFieldID.ToString(),droneStats.DronePlantsCapacity.ToString(),droneStats.DroneID.ToString());
+
+        UIController.Instance.CloseDeleteDialog();
+        UIController.Instance.DeleteDialogYesButton.onClick.RemoveAllListeners();
+        OnDroneAssignDateChange();
     }
 
     public void GetDroneData()
@@ -152,6 +165,7 @@ public class Drone : MonoBehaviour
     {
         public int DroneID;
         public int DroneContractID;
+        public int DronePlantsCapacity;
         public int DroneFieldID;
         public bool isDroneBusy;
         public float DroneBattery;

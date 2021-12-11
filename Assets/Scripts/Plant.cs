@@ -25,15 +25,15 @@ public class Plant : MonoBehaviour
     public void SetInitialPlants(int contid, int plantid, int fieldID)
     {
 
-        Debug.Log(fieldID);
         plantStats = new PlantStats();
         plantStats.isDroneAssigned = false;
         plantStats.isPlantPlanted = true;
         plantStats.isPlantInContract = true;
-        plantStats.FieldID = contid;
+        plantStats.FieldID = fieldID;
         plantStats.ContractID = contid;
         plantStats.PlantID = plantid;
-        plantStats.LastVisitedDroneTime = DateManager.dateManager.DateTimeToTicks();
+        plantStats.LastVisitedDroneTime = "no drone assigned";
+        //  plantStats.LastVisitedDroneTime= DateManager.dateManager.DateTimeToTicks();
 
         plantGrowthFactors = new PlantGrowthFactors();
         plantGrowthFactors.ColorofPlant = 10;
@@ -76,7 +76,7 @@ public class Plant : MonoBehaviour
         .GetValueAsync().ContinueWith(task =>
         {
             OnPlantGrowthFactorsResponseReceived(task.Result, task);
-    
+
         });
     }
 
@@ -90,7 +90,7 @@ public class Plant : MonoBehaviour
     public void GetFieldPlantStatsData(int StaticConttractID, int plantID, int fieldid)
     {
         MainManager.firebase().Child("contract" + StaticConttractID).Child("Field" + fieldid).Child("stats").Child("plant" + plantID)
-           .GetValueAsync().ContinueWithOnMainThread(task =>
+           .GetValueAsync().ContinueWith(task =>
            {
                OnPlantStatsResponseReceived(task.Result, task);
                //if (task.IsFaulted)
@@ -127,8 +127,41 @@ public class Plant : MonoBehaviour
         }
 
         plantStats = JsonUtility.FromJson<PlantStats>(snap.GetRawJsonValue());
-        lastVisitedDroneTime = DateManager.dateManager.TicksToDateTime(plantStats.LastVisitedDroneTime);
+
+        var currentDate = System.DateTime.Now;
+        string droneTime = plantStats.LastVisitedDroneTime;
+        long droneTimeToLong = long.Parse(droneTime);
+        DateTime lastVisitedDroneTime = new DateTime(droneTimeToLong);
+        var minutes = DateManager.GetSubMinutes(lastVisitedDroneTime, currentDate);
+        var passedHours = DateManager.GetSubHours(lastVisitedDroneTime, currentDate);
+        Debug.Log(passedHours);
+        if (passedHours >= 21)
+            UpdatePlantStatsDaily();
     }
+
+
+    /// <summary>
+    /// Updating the plant stats daily
+    /// </summary>
+    void UpdatePlantStatsDaily()
+    {
+        Debug.Log("updating daily plant stats");
+        Dictionary<string, object> droneParameters = new Dictionary<string, object>();
+
+        int valueIncrement = 2;
+        droneParameters.Add("Disease", plantStats.Disease += valueIncrement);
+        droneParameters.Add("SoilMoisture", plantStats.SoilMoisture += valueIncrement);
+        droneParameters.Add("SoilDensity", plantStats.SoilDensity += valueIncrement);
+        droneParameters.Add("SoilOrganicMaterial", plantStats.SoilOrganicMaterial += valueIncrement);
+        droneParameters.Add("Fertilizer", plantStats.Fertilizer += valueIncrement);
+        droneParameters.Add("Weed", plantStats.Weed += valueIncrement);
+        droneParameters.Add("Toxicity", plantStats.Toxicity += valueIncrement);
+        droneParameters.Add("Acidity", plantStats.Acidity += valueIncrement);
+        droneParameters.Add("LastVisitedDroneTime", plantStats.LastVisitedDroneTime = DateManager.dateManager.DateTimeToTicks());
+
+        MainManager.firebase().Child("contract" + plantStats.ContractID).Child("Field" + plantStats.FieldID).Child("stats").Child("plant" + plantStats.PlantID).UpdateChildrenAsync(droneParameters);
+    }
+
 
 
     /// <summary>
@@ -148,7 +181,7 @@ public class Plant : MonoBehaviour
     }
 
 
-    int initialPlants = 15;
+    int initialPlants = 30;
 
 
 
@@ -172,7 +205,9 @@ public class Plant : MonoBehaviour
         public int Disease;
         public int Toxicity;
         public int Acidity;
+
     }
+
 
     [Serializable]
     public class PlantGrowthFactors

@@ -27,8 +27,8 @@ public class DateManager : MonoBehaviour
     private void Start()
     {
 
-        SetStartDate();
-        Debug.Log(GetDaysPassed());
+       // SetStartDate();
+      //  Debug.Log(GetDaysPassed());
     }
 
 
@@ -46,12 +46,12 @@ public class DateManager : MonoBehaviour
     }
 
 
-    public static string GetDaysPassed()
+    public static string GetDaysPassed(DateTime startData)
     {
         today = System.DateTime.Now;
 
         //days between today and start date -->
-        System.TimeSpan elapsed = today.Subtract(startDate);
+        System.TimeSpan elapsed = today.Subtract(startData);
 
         double days = elapsed.TotalDays;
 
@@ -83,7 +83,7 @@ public class DateManager : MonoBehaviour
     /// <param name="startTimer"></param>
     /// <param name="endTimer"></param>
     /// <returns></returns>
-    public int GetSubMinutes(DateTime startTimer, DateTime endTimer)
+    public static int GetSubMinutes(DateTime startTimer, DateTime endTimer)
     {
         TimeSpan startSpan = new TimeSpan(startTimer.Ticks);
 
@@ -102,7 +102,7 @@ public class DateManager : MonoBehaviour
     /// <param name="startTimer"></param>
     /// <param name="endTimer"></param>
     /// <returns></returns>
-    public int GetSubHours(DateTime startTimer, DateTime endTimer)
+    public static int GetSubHours(DateTime startTimer, DateTime endTimer)
     {
         TimeSpan startSpan = new TimeSpan(startTimer.Ticks);
 
@@ -120,7 +120,7 @@ public class DateManager : MonoBehaviour
     /// <param name="startTimer"></param>
     /// <param name="endTimer"></param>
     /// <returns></returns>
-    public int GetSubDays(DateTime startTimer, DateTime endTimer)
+    public static int GetSubDays(DateTime startTimer, DateTime endTimer)
     {
         TimeSpan startSpan = new TimeSpan(startTimer.Ticks);
 
@@ -134,7 +134,8 @@ public class DateManager : MonoBehaviour
 
     public string DateTimeToTicks()
     {
-        var ticks = JsonUtility.ToJson((JsonDateTime)DateTime.Now);
+        //var ticks = JsonUtility.ToJson((JsonDateTime)DateTime.Now.ToLocalTime());
+        var ticks = DateTime.Now.ToLocalTime().Ticks.ToString();
         return ticks;
     }
 

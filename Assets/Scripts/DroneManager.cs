@@ -1,8 +1,11 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class DroneManager : MonoBehaviour
+
+
+    public class DroneManager : MonoBehaviour
 {
 
     [SerializeField] List<Drone> AllDrones = new List<Drone>();
@@ -12,11 +15,15 @@ public class DroneManager : MonoBehaviour
 
     private void Awake()
     {
+
+
         if (Instance == null)
             Instance = this;
         else if (Instance != this)
             Destroy(this.gameObject);
     }
+
+
 
 
     public int DronesCount()

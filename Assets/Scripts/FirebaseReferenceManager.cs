@@ -1,9 +1,12 @@
 ﻿using Firebase;
 using Firebase.Auth;
 using Firebase.Database;
+using Firebase.Extensions;
+using Firebase.Functions;
 using Firebase.Unity.Editor;
-using System.Collections;
+using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 
 public class FirebaseReferenceManager : MonoBehaviour
@@ -15,14 +18,16 @@ public class FirebaseReferenceManager : MonoBehaviour
         FirebaseApp.DefaultInstance.SetEditorDatabaseUrl(DATABASEURL);
         reference = FirebaseDatabase.DefaultInstance.RootReference;
 
-
     }
 
     // Update is called once per frame
     void Update()
     {
-        
+
     }
+
+
+   
 
 
 
@@ -30,4 +35,6 @@ public class FirebaseReferenceManager : MonoBehaviour
     public static DatabaseReference reference;
     string DATABASEURL = "https://purriafresh.firebaseio.com/";
     public FirebaseAuth auth;
+
+
 }
