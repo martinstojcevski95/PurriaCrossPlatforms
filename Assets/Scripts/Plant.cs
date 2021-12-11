@@ -135,7 +135,7 @@ public class Plant : MonoBehaviour
         var minutes = DateManager.GetSubMinutes(lastVisitedDroneTime, currentDate);
         var passedHours = DateManager.GetSubHours(lastVisitedDroneTime, currentDate);
         Debug.Log(passedHours);
-        if (passedHours >= 21)
+        if (passedHours >= 24)
             UpdatePlantStatsDaily();
     }
 
