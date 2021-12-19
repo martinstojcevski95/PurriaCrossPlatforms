@@ -132,11 +132,17 @@ public class Plant : MonoBehaviour
         string droneTime = plantStats.LastVisitedDroneTime;
         long droneTimeToLong = long.Parse(droneTime);
         DateTime lastVisitedDroneTime = new DateTime(droneTimeToLong);
-        var minutes = DateManager.GetSubMinutes(lastVisitedDroneTime, currentDate);
-        var passedHours = DateManager.GetSubHours(lastVisitedDroneTime, currentDate);
-        Debug.Log(passedHours);
-        if (passedHours >= 24)
-            UpdatePlantStatsDaily();
+       // var passedHours = DateManager.GetSubHours(lastVisitedDroneTime, currentDate);
+        var fullDayPassed = DateManager.GetSubDays(lastVisitedDroneTime, currentDate);
+
+        if (fullDayPassed >= 1)
+        {
+            for (int i = 0; i < fullDayPassed; i++)
+            {
+                Debug.Log(fullDayPassed + " days has passed updating " + fullDayPassed + " times");
+                UpdatePlantStatsDaily();
+            }
+        }
     }
 
 
